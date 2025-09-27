@@ -3,36 +3,51 @@
 import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function LoginPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  })
+  
+  console.log(formData);
 
-  const HARD_EMAIL = "jameboy@gmail.com";
-  const HARD_PASSWORD = "123";
+  // useEffect(() => {
+  //   if (session) {
+  //     router.push("/user-onboarding");
+  //   }
+  // }, [session, router]);
 
-  useEffect(() => {
-    if (session) {
-      router.push("/user-onboarding");
-    }
-  }, [session, router]);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  const handleLogin = (e) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please enter email and password.");
-      return;
-    }
-
-    if (email === HARD_EMAIL && password === HARD_PASSWORD) {
-      router.push("/user-onboarding");
-    } else {
-      setError("Invalid email or password.");
+    try {
+      await axios.post(`${API}/api/auth/login`, formData, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true
+      }).then((res) => {
+        if (res.data.status && res.data.onBoarding) {
+          router.push("/home");
+        } else {
+          router.push("/user-onboarding");
+        }
+      })
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -51,18 +66,19 @@ export default function LoginPage() {
           <input
             type="email"
             placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
             className="p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="password"
             placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
             className="p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          {error && <p className="text-red-600">{error}</p>}
 
           <div className="flex items-center justify-between text-sm ">
             <button
@@ -72,6 +88,11 @@ export default function LoginPage() {
             >
               Forgot password
             </button>
+          </div>
+          <div className="mt-4 text-sm text-center">
+            <a href="/register" className="text-blue-500 hover:underline">
+              Register
+            </a>
           </div>
 
           <button
@@ -96,7 +117,7 @@ export default function LoginPage() {
           Sign in with Google
         </button>
 
-      
+
       </div>
     </div>
   );

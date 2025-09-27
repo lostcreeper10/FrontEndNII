@@ -1,43 +1,64 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import Navigation from "../components/navigation";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [pet, setPet] = useState("");
-  const [message, setMessage] = useState("");
+  const [decoded, setDecoded] = useState(null);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    petsName: ""
+  })
+  console.log(formData);
 
   useEffect(() => {
-    // Load existing user info from session or backend
-    if (session) {
-      setFirstName(session.user?.firstName || "");
-      setLastName(session.user?.lastName || "");
-      setPet(session.user?.pet || "");
-    }
-  }, [session]);
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(`${API}/api/auth/me`, { withCredentials: true });
+        setDecoded(res.data);
+        setFormData({
+          firstName: res.data.firstName || "",
+          middleName: res.data.middleName || "",
+          lastName: res.data.lastName || "",
+          petsName: res.data.petsName || ""
+        });
+      } catch (error) {
+        alert("You must be logged in to view this page.");
+      }
+    };
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (!firstName || !lastName || !pet) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-    // Save profile data (could send to backend)
-    console.log({ firstName, lastName, pet });
-    setMessage("Profile updated successfully!");
-  };
+    fetchProfile();
+  }, []);
 
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-        <p>Please log in to manage your profile.</p>
-      </div>
-    );
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   }
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/api/auth/profile`, formData, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true
+      }).then((res) => {
+        if (res.data.status) {
+          alert("Profile updated successfully!");
+        }
+      })
+
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile.");
+    }
+  };
 
   return (
     <>
@@ -53,24 +74,42 @@ export default function ProfilePage() {
           className="flex flex-col gap-4 w-full max-w-md bg-gray-800 p-6 rounded shadow-lg"
         >
           <input
-            type="text"
+            type="email"
             placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            className="w-full border p-2 rounded bg-gray-100"
+            value={decoded?.email || ""}
+            disabled
+          />
+
+          <input
+            type="text"
+            name="firstName"
+            placeholder="First Name"
+            value={formData.firstName}
+            onChange={handleChange}
+            className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+          />
+          <input
+            type="text"
+            name="middleName"
+            placeholder="Middle Name"
+            value={formData.middleName}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
           />
           <input
             type="text"
             placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            value={formData.lastName}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
           />
           <input
             type="text"
+            name="petsName"
             placeholder="Pet"
-            value={pet}
-            onChange={(e) => setPet(e.target.value)}
+            value={formData.petsName}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
           />
           <button
@@ -79,7 +118,6 @@ export default function ProfilePage() {
           >
             Save
           </button>
-          {message && <p className="text-green-400">{message}</p>}
         </form>
       </div>
     </>

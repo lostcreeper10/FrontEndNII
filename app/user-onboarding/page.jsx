@@ -2,26 +2,42 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function UserOnboardPage() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [pet, setPet] = useState("");
-  const [error, setError] = useState(""); 
+  const [error, setError] = useState("");
   const router = useRouter();
+  const [formData, setFormData] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    petsName: ""
+  });
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !pet) {
-      setError("Please fill in all fields.");
-      return;
-    }
+    await axios.put(`${API}/api/auth/onBoarding`, formData, {
+      headers: {
+        "Content-Type": "application/json"
+      },
+      withCredentials: true
+    }).then((res) => {
+      if(res.data.satus){
+        console.log("You are now all set!");
+        router.push("/home");
+      }
+    })
 
-    setError(""); // clear previous error
-    // save profile data (could be to database)
-    console.log({ firstName, lastName, pet });
-    // redirect to home
+    setError("");
     router.push("/home");
   };
 
@@ -36,22 +52,35 @@ export default function UserOnboardPage() {
         <input
           type="text"
           placeholder="First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          name="firstName"
+          value={formData.firstName}
+          onChange={handleChange}
           className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
         />
+
+        <input
+          type="text"
+          placeholder="Middle Name"
+          name="middleName"
+          value={formData.middleName}
+          onChange={handleChange}
+          className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+        />
+
         <input
           type="text"
           placeholder="Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          name="lastName"
+          value={formData.lastName}
+          onChange={handleChange}
           className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
         />
         <input
           type="text"
           placeholder="Pet"
-          value={pet}
-          onChange={(e) => setPet(e.target.value)}
+          name="petsName"
+          value={formData.petsName}
+          onChange={handleChange}
           className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
         />
         {error && <p className="text-red-400">{error}</p>}
@@ -61,6 +90,7 @@ export default function UserOnboardPage() {
         >
           Create
         </button>
+        <a href="/home">Set up later?</a>
       </form>
     </div>
   );

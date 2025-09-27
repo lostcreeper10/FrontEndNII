@@ -1,34 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "../components/navigation";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ChangePasswordPage() {
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formData, setFormData] = useState({
+    email: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: ""
+  })
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get(`${API}/api/auth/me`, { withCredentials: true });
+        setFormData({
+          email: res.data.email || "",
+        });
+      } catch (error) {
+        alert("You must be logged in to view this page.");
+        console.log(error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
-    if (!oldPassword || !newPassword || !confirmPassword) {
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmNewPassword) {
       setMessage("Please fill in all fields.");
       return;
     }
 
-    if (newPassword !== confirmPassword) {
+    if (formData.newPassword !== formData.confirmNewPassword) {
       setMessage("New password and confirmation do not match.");
       return;
     }
 
+    try {
+      console.log(formData);
+      await axios.post(`${API}/api/auth/change-password`, formData, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true
+      }).then((res) => {
+        if (res.data.status) return alert("Password changed successfully!");
+      })
+    } catch (error) {
+      console.log(error);
+    }
+
     // TODO: Connect with backend API to change password
-    console.log({ oldPassword, newPassword });
     setMessage("Password changed successfully!");
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
   };
 
   return (
@@ -45,25 +83,40 @@ export default function ChangePasswordPage() {
           className="flex flex-col gap-4 w-full max-w-md bg-gray-800 p-6 rounded shadow-lg"
         >
           <input
+            type="email"
+            placeholder="Email"
+            name="email"
+            value={formData.email || ""}
+            onChange={handleChange}
+            className="p-2 rounded border border-gray-600 bg-gray-100 text-white "
+            disabled
+          />
+          <input
             type="password"
-            placeholder="Old Password"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
+            placeholder="Current Password"
+            name="currentPassword"
+            value={formData.currentPassword || ""}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+            required
           />
           <input
             type="password"
             placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            name="newPassword"
+            value={formData.newPassword || ""}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+            required
           />
           <input
             type="password"
             placeholder="Confirm New Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            name="confirmNewPassword"
+            value={formData.confirmNewPassword || ""}
+            onChange={handleChange}
             className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+            required
           />
           <button
             type="submit"

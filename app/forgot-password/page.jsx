@@ -1,7 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios"
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -9,19 +11,23 @@ export default function ForgotPasswordPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [inputCode, setInputCode] = useState("");
   const [message, setMessage] = useState("");
+  const [formData, setFormData] = useState({
+    newPassword: "",
+    confirmNewPassword: ""
+  })
   const router = useRouter();
 
-  const HARD_EMAIL = "jameboy@gmail.com";
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  const handleSendCode = (e) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  const handleSendCode = async (e) => {
     e.preventDefault();
+
     if (!email) {
       setMessage("Please enter your email.");
-      return;
-    }
-
-    if (email !== HARD_EMAIL) {
-      setMessage("Email not found.");
       return;
     }
 
@@ -33,10 +39,33 @@ export default function ForgotPasswordPage() {
     setMessage("A verification code has been sent to your email.");
   };
 
-  const handleVerifyCode = (e) => {
+  const handleVerifyCode = async (e) => {
     e.preventDefault();
+    if(formData.newPassword !== formData.confirmNewPassword)
+    {
+      alert("New password and Confirm New Password doesn't match!");
+      return;
+    }
     if (inputCode === verificationCode) {
-      router.push("/user-onboarding");
+      router.push("/login");
+      try {
+        await axios.post(`${API}/api/auth/forgot-password`, formData, {
+          headers: {
+            "Content-Type": "application/json"
+          },
+          withCredentials: true
+        }).then((res) => {
+          if (res.data.status) {
+            let message = res.data.message;
+            console.log(message);
+          } else {
+            let message = res.data.message;
+            alert(message);
+          }
+        })
+      } catch (error) {
+        console.log(error);
+      }
     } else {
       setMessage("Incorrect verification code.");
     }
@@ -75,6 +104,25 @@ export default function ForgotPasswordPage() {
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
                 className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+                required
+              />
+              <input
+                type="password"
+                placeholder="New Password"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleChange}
+                className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Confirm New Password"
+                name="confirmNewPassword"
+                value={formData.confirmNewPassword}
+                onChange={handleChange}
+                className="p-2 rounded border border-gray-600 bg-gray-700 text-white"
+                required
               />
               <button
                 type="submit"

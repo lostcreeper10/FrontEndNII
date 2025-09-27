@@ -3,10 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Navigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API}/api/auth/logout`, {}, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true
+      }).then((res) => {
+        if(res.data.status){
+          console.log("Successfully logged out!");
+          router.push("/login");
+        }
+      })
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   return (
     <nav className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-transparent text-white z-50">
@@ -66,7 +87,10 @@ export default function Navigation() {
                 Change Password
               </button>
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => {
+                  handleLogout();
+                  signOut({ callbackUrl: "/login" })
+                }}
                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 cursor-pointer"
               >
                 Logout
